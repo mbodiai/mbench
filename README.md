@@ -7,7 +7,7 @@
 
 ## Table of Contents
 
-- [mbodied-data](#mbodied-data)
+- [mbench](#mbench)
   - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
   - [Usage](#usage)
@@ -28,6 +28,7 @@ profileme()
 def some_function():
     print("Hello")
 
+some_function()
 ```
 
 ```console
