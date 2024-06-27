@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mbench"
+dynamic = ["version"]
+description = 'Simple Benchmarking Library.'
+readme = "README.md"
+requires-python = ">=3.10"
+license = "apache-2.0"
+keywords = []
+authors = [
+  { name = "Sebastian Peralta", email = "sebastian@mbodi.ai" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "psutil>=5.9.0",
+  "rich>=13.7.0",
+  "memory-profiler>=0.61.0",
+  "pandas==2.2.2",
+  "pynvml==11.5.0",
+]
+
+[project.urls]
+Documentation = "https://github.com/mbodiai/mbench#readme"
+Issues = "https://github.com/mbodiai/mbench/issues"
+Source = "https://github.com/mbodiai/mbench"
+
+[project.optional-dependencies]
+all = ["pandas==2.2.2", "pynvml==11.5.0"]
+
+[tool.hatch.version]
+path = "mbench/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/mbench tests}"
+
+[tool.coverage.run]
+source_pkgs = ["mbench", "tests"]
+branch = true
+parallel = true
+omit = [
+  "mbench/__about__.py",
+]
+
+[tool.coverage.paths]
+mbench = ["mbench", "*/mbench"]
+tests = ["tests", "*/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.hatch.envs.default]
+path = ".mbench"
+python = "3.11"
