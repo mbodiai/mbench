@@ -1,4 +1,4 @@
-# mbodied-data
+# mbench
 
 [![PyPI - Version](https://img.shields.io/pypi/v/mbodied-data.svg)](https://pypi.org/project/mbodied-data)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/mbodied-data.svg)](https://pypi.org/project/mbodied-data)
