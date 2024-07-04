@@ -1,6 +1,8 @@
-from profile import profileme
+from mbench.profile import profile, profileme
+
 
 profileme()  # Set up the profiler first
+
 
 def another_function():
     """
