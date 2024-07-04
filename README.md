@@ -49,6 +49,13 @@ Function: some_function
 Profiling data saved to profiling_data.csv
 ```
 
+Functions you want to profile must
+
+1. Be _defined_ in the same module as the `profileme` function.
+2. Be called after `profileme()` is called.
+
+This is to avoid imports and other low-level functions from being profiled.
+
 ## License
 
 `mbench` is distributed under the terms of the [MIT License](LICENSE).

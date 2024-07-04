@@ -101,7 +101,7 @@ class FunctionProfiler:
     def profile(self, frame, event, arg):
         if event == 'call':
             return self._start_profile(frame)
-        elif event == 'return':
+        if event == 'return':
             self._end_profile(frame)
         return self.profile
 
@@ -125,10 +125,10 @@ class FunctionProfiler:
 
     def _start_profile(self, frame):
         if frame.f_globals.get('__name__') != self.target_module:
-            return
+            return None
         func_key = self._get_func_key(frame)
         if func_key in self.profiler_functions:
-            return
+            return None
         self.current_calls[func_key] = {
             'start_time': time.time(),
             'cpu_start': time.process_time(),
@@ -171,10 +171,10 @@ class FunctionProfiler:
             
             # Print immediate profile
             print(f"[bold green]Function: {func_key}[/bold green]")
-            print(f"  Duration: {duration:.6f} seconds")
-            print(f"  CPU time: {cpu_usage:.6f} seconds")
-            print(f"  Memory usage: {format_bytes(mem_usage)}")
-            print(f"  GPU usage: {format_bytes(gpu_usage)}")
+            print(f"[bold white]Duration: {duration:.6f}[/bold white] seconds")
+            print(f"CPU time: {cpu_usage:.6f} seconds")
+            print(f"Memory usage: [bold red]{format_bytes(mem_usage)} [/bold red]")
+            print(f"GPU usage:[bold white]{format_bytes(gpu_usage)} [/bold white]")
             print(f"  I/O usage: {format_bytes(io_usage)}")
             print(f"  Avg Duration: {avg_time:.6f} seconds")
             print(f"  Avg CPU time: {avg_cpu:.6f} seconds")
@@ -200,3 +200,21 @@ def profileme():
     elif os.environ.get('MBENCH') != '1':
         print("Profiling is not active. Set MBENCH=1 to enable profiling.")
 
+
+def profile(func):
+    def wrapper(*args, **kwargs):
+        global _profiler_instance
+        if os.environ.get('MBENCH') == '1':
+            if _profiler_instance is None:
+                _profiler_instance = FunctionProfiler()
+                caller_module = func.__module__
+                _profiler_instance.set_target_module(caller_module)
+                sys.setprofile(_profiler_instance.profile)
+                print(f"[bold green] Profiling started for module: {caller_module} [/bold green]")
+            result = func(*args, **kwargs)
+            sys.setprofile(None)  # Stop profiling after the function call
+            return result
+        else:
+            print("Profiling is not active. Set MBENCH=1 to enable profiling.")
+            return func(*args, **kwargs)
+    return wrapper
