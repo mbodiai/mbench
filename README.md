@@ -11,6 +11,10 @@
   - [Table of Contents](#table-of-contents)
   - [Installation](#installation)
   - [Usage](#usage)
+  - [Caller Mode](#caller-mode)
+  - [Callee Mode](#callee-mode)
+  - [Using as a context manager](#using-as-a-context-manager)
+  - [Using as a decorator](#using-as-a-decorator)
   - [License](#license)
 
 ## Installation
@@ -23,7 +27,7 @@ pip install mbench
 
 ```python
 from mbench import profileme
-profileme()
+profileme(mode="caller")
 
 def some_function():
     print("Hello")
@@ -49,12 +53,42 @@ Function: some_function
 Profiling data saved to profiling_data.csv
 ```
 
+## Caller Mode
+
 Functions you want to profile must
 
-1. Be _defined_ in the same module as the `profileme` function.
+1. Be _defined_ in the same module that the `profileme` function is being called.
 2. Be called after `profileme()` is called.
 
-This is to avoid imports and other low-level functions from being profiled.
+## Callee Mode
+
+Functions you want to profile must
+
+1. Be _called_ in the same module that the `profileme` function is being called.
+2. Be called after `profileme()` is called.
+
+## Using as a context manager
+
+```python
+from mbench import profile_block
+
+  def some_function():
+        print("Hello")
+
+with profileme():
+    some_function()
+```
+
+## Using as a decorator
+
+```python
+from mbench import profile
+
+@profile
+def some_function():
+    print("Hello")
+```
+
 
 ## License
 
