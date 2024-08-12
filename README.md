@@ -77,14 +77,14 @@ with profiling:
   run_anything()
 ```
 
-## Caller Mode
+## Caller Mode  (Default)
 
 Functions you want to profile must
 
 1. Be _defined_ in the same module that the `profileme` function is being called.
 2. Be called after `profileme(mode="caller")` is called.
 
-## Callee Mode (Default Behavior)
+## Callee Mode
 
 Functions you want to profile must
 
