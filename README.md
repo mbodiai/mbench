@@ -77,42 +77,19 @@ with profiling:
   run_anything()
 ```
 
-
 ## Caller Mode
 
 Functions you want to profile must
 
 1. Be _defined_ in the same module that the `profileme` function is being called.
-2. Be called after `profileme()` is called.
+2. Be called after `profileme(mode="caller")` is called.
 
-## Callee Mode
+## Callee Mode (Default Behavior)
 
 Functions you want to profile must
 
 1. Be _called_ in the same module that the `profileme` function is being called.
-2. Be called after `profileme()` is called.
-
-## Using as a context manager
-
-```python
-from mbench import profile_block
-
-  def some_function():
-        print("Hello")
-
-with profileme():
-    some_function()
-```
-
-## Using as a decorator
-
-```python
-from mbench import profile
-
-@profile
-def some_function():
-    print("Hello")
-```
+2. Be called after `profileme(mode="callee")` is called.
 
 
 ## License
