@@ -27,12 +27,28 @@ pip install mbench
 
 ```python
 from mbench import profileme
-profileme(mode="caller")
+profileme()
 
 def some_function():
     print("Hello")
 
 some_function()
+```
+
+### As a Decorator
+
+```
+from mbench import profile
+@profile
+def some_function():
+    print("Hello")
+```
+
+### As a Context Manager
+```
+from mbench import profiling
+with profiling:
+  run_anything()
 ```
 
 ```console
