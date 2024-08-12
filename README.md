@@ -37,7 +37,7 @@ some_function()
 
 ### As a Decorator
 
-```
+```python
 from mbench import profile
 @profile
 def some_function():
@@ -45,7 +45,7 @@ def some_function():
 ```
 
 ### As a Context Manager
-```
+```python
 from mbench import profiling
 with profiling:
   run_anything()
