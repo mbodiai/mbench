@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mbench"
+name = "synaptic"
 dynamic = ["version"]
-description = 'Simple Benchmarking Library.'
+description = 'Communication for real time streaming and concurrent data processing.'
 readme = "README.md"
 requires-python = ">=3.10"
 license = "apache-2.0"
@@ -31,33 +31,33 @@ dependencies = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/mbodiai/mbench#readme"
-Issues = "https://github.com/mbodiai/mbench/issues"
-Source = "https://github.com/mbodiai/mbench"
+Documentation = "https://github.com/mbodiai/synaptic#readme"
+Issues = "https://github.com/mbodiai/synaptic/issues"
+Source = "https://github.com/mbodiai/synaptic"
 
 [project.optional-dependencies]
 all = ["pandas==2.2.2", "pynvml==11.5.0"]
 
 [tool.hatch.version]
-path = "mbench/__about__.py"
+path = "synaptic/__about__.py"
 
 [tool.hatch.envs.types]
 extra-dependencies = [
   "mypy>=1.0.0",
 ]
 [tool.hatch.envs.types.scripts]
-check = "mypy --install-types --non-interactive {args:src/mbench tests}"
+check = "mypy --install-types --non-interactive {args:src/synaptic tests}"
 
 [tool.coverage.run]
-source_pkgs = ["mbench", "tests"]
+source_pkgs = ["synaptic", "tests"]
 branch = true
 parallel = true
 omit = [
-  "mbench/__about__.py",
+  "synaptic/__about__.py",
 ]
 
 [tool.coverage.paths]
-mbench = ["mbench", "*/mbench"]
+synaptic = ["synaptic", "*/synaptic"]
 tests = ["tests", "*/tests"]
 
 [tool.coverage.report]
@@ -68,5 +68,5 @@ exclude_lines = [
 ]
 
 [tool.hatch.envs.default]
-path = ".mbench"
+path = ".synaptic"
 python = "3.11"
