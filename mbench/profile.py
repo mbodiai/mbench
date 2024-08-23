@@ -10,7 +10,6 @@ import sys
 import time
 from collections import defaultdict
 from typing_extensions import Literal
-from typing_extensions import Literal
 from contextlib import contextmanager
 import psutil
 import pynvml
@@ -118,7 +117,7 @@ def display_profile_info(
     calls,
     notes=None,
 ):
-    table = Table(title=f"Profile Information for Block: {name}")
+    table = Table(title=f"Profile Information for {name}")
 
     table.add_column("Metric", justify="right", style="cyan", no_wrap=True)
     table.add_column("Value", style="magenta")
