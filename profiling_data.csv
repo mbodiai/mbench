@@ -1,0 +1,2 @@
+Function,Calls,Total Time,Total CPU,Total Memory,Total GPU,Total IO,Avg Duration,Avg CPU Usage,Avg Memory Usage,Avg GPU Usage,Avg IO Usage
+another_function,10,0.005379,0.004140,-15.375000,0.000000,0.175781,0.000538,0.000414,-1.537500,0.000000,0.017578
