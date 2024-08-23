@@ -4,3 +4,4 @@ numpy==2.0.0
 psutil==6.0.0
 rich==13.7.1
 pytest
+rich==13.3.5
