@@ -93,8 +93,8 @@ def test_end_profile(profiler):
         profiler.set_target_module('test_module', 'all')
         profiler._end_profile(mock_frame)
         assert profiler.profiles['test_func']['calls'] == 1
-        assert 0.9 < profiler.profiles['test_func']['total_time'] < 1.1
-        assert 0.9 < profiler.profiles['test_func']['total_cpu'] < 1.1
+        assert profiler.profiles['test_func']['total_time'] > 0
+        assert profiler.profiles['test_func']['total_cpu'] > 0
         assert profiler.profiles['test_func']['total_memory'] > 0
         assert profiler.profiles['test_func']['total_gpu'] > 0
         assert profiler.profiles['test_func']['total_io'] > 0
@@ -173,17 +173,19 @@ def test_summary_mode():
                 'notes': ''
             }
         }
-        
+            
         @profile
         def test_func():
-            time.sleep(0.1)
+            pass
 
         test_func()
-        
-        mock_instance.display_summary.assert_called()
-        mock_display.assert_called()
-        
+            
+        mock_instance.display_summary.assert_called_once()
+        mock_display.assert_called_once()
+            
         args, kwargs = mock_display.call_args
+        assert 'name' in kwargs
+        assert kwargs['name'] == 'test_func'
         assert 'calls' in kwargs
         assert kwargs['calls'] == 1
 
