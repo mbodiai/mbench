@@ -238,8 +238,6 @@ class FunctionProfiler:
                     quiet=False,  # Always show in summary
                     min_duration=0  # Show all in summary
                 )
-        # Reset profiles after displaying summary
-        self.profiles.clear()
 
     def format_bytes(self, bytes_value):
         kb = bytes_value / 1024
@@ -506,10 +504,8 @@ def profile(func):
                 return result
             finally:
                 _profiler_instance._end_profile(frame)
-        elif not printed_profile:
-            printed_profile = True
-            console.print("Profiling is not active. Set [bold pink]MBENCH=1[/bold pink] to enable profiling.")
-        return func(*args, **kwargs)
+        else:
+            return func(*args, **kwargs)
 
     return wrapper
 
@@ -532,9 +528,6 @@ def profiling(name="block", quiet=False, min_duration=0.1):
         }
         frame = sys._getframe(1)  # Get the caller's frame
         _profiler_instance._start_profile(frame)
-    elif not printed_profile:
-        printed_profile = True
-        console.print("Profiling is not active. Set [bold pink]MBENCH=1[/bold pink] to enable profiling.")
     try:
         yield  # Allow the code block to execute
     finally:
