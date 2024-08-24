@@ -214,9 +214,6 @@ class FunctionProfiler:
         self.summary_mode = enabled
 
     def display_summary(self):
-        if not self.summary_mode:
-            return
-
         console.print("[bold blue]Profiling Summary:[/bold blue]")
         for func, data in self.profiles.items():
             calls = data['calls']
@@ -238,7 +235,6 @@ class FunctionProfiler:
                     quiet=False,  # Always show in summary
                     min_duration=0  # Show all in summary
                 )
-        # Don't clear profiles here, as it might be needed for other tests
 
     def format_bytes(self, bytes_value):
         kb = bytes_value / 1024
@@ -499,7 +495,9 @@ def profile(func):
             caller_module = func.__module__
             _profiler_instance.set_target_module(caller_module, "caller")
             with profiling(func.__name__, min_duration=0):  # Set min_duration to 0 to always display
-                return func(*args, **kwargs)
+                result = func(*args, **kwargs)
+            _profiler_instance.display_summary()  # Display summary after each function call
+            return result
         else:
             return func(*args, **kwargs)
 
@@ -548,8 +546,8 @@ def profiling(name="block", quiet=False, min_duration=0.1):
             profile_data["total_gpu"] += gpu_usage
             profile_data["total_io"] += io_usage
 
-            # Print immediate profile if not in summary mode and duration is above min_duration
-            if not _profiler_instance.summary_mode and duration >= min_duration:
+            # Print immediate profile if not in summary mode
+            if not _profiler_instance.summary_mode:
                 calls = profile_data["calls"]
                 avg_time = profile_data["total_time"] / calls
                 avg_cpu = profile_data["total_cpu"] / calls
