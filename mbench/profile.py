@@ -238,6 +238,8 @@ class FunctionProfiler:
                     quiet=False,  # Always show in summary
                     min_duration=0  # Show all in summary
                 )
+        # Reset profiles after displaying summary
+        self.profiles.clear()
 
     def format_bytes(self, bytes_value):
         kb = bytes_value / 1024
@@ -497,15 +499,13 @@ def profile(func):
                 _profiler_instance = FunctionProfiler()
             caller_module = func.__module__
             _profiler_instance.set_target_module(caller_module, "caller")
-            sys.setprofile(_profiler_instance.profile)
+            frame = sys._getframe(1)  # Get the caller's frame
+            _profiler_instance._start_profile(frame)
             try:
-                frame = sys._getframe(1)  # Get the caller's frame
-                _profiler_instance._start_profile(frame)
                 result = func(*args, **kwargs)
-                _profiler_instance._end_profile(frame)
                 return result
             finally:
-                sys.setprofile(None)  # Disable profiling after function execution
+                _profiler_instance._end_profile(frame)
         elif not printed_profile:
             printed_profile = True
             console.print("Profiling is not active. Set [bold pink]MBENCH=1[/bold pink] to enable profiling.")
@@ -522,7 +522,6 @@ def profiling(name="block", quiet=False, min_duration=0.1):
         if _profiler_instance is None:
             _profiler_instance = FunctionProfiler()
         _profiler_instance.set_target_module("__main__", "caller")
-        sys.setprofile(_profiler_instance.profile)
 
         start_data = {
             "start_time": time.time(),
