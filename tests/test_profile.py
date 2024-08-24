@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from mbench.profile import FunctionProfiler, profileme, profile, profiling
+from mbench.profile import FunctionProfiler, profileme, profile, profiling, display_profile_info
 import os
 import sys
 import time
