@@ -180,6 +180,22 @@ def display_profile_info(
 # )
 
 
+import atexit
+import csv
+import os
+import sys
+import time
+from collections import defaultdict
+from typing_extensions import Literal
+from contextlib import contextmanager
+import psutil
+import pynvml
+from rich.table import Table
+from rich.console import Console
+from rich import print
+
+console = Console()
+
 class FunctionProfiler:
     _instance = None
 
@@ -210,8 +226,11 @@ class FunctionProfiler:
             self.num_gpus = 0
             self.gpu_handles = []
 
+        print(f"[green]FunctionProfiler initialized with {self.num_gpus} GPUs[/green]")
+
     def set_summary_mode(self, enabled=True):
         self.summary_mode = enabled
+        print(f"[blue]Summary mode set to: {enabled}[/blue]")
 
     def display_summary(self):
         console.print("[bold blue]Profiling Summary:[/bold blue]")
@@ -236,28 +255,30 @@ class FunctionProfiler:
                     min_duration=0  # Show all in summary
                 )
         self.profiles.clear()  # Clear profiles after displaying summary
+        print("[green]Profiles cleared after summary display[/green]")
 
     def format_bytes(self, bytes_value):
-        if isinstance(bytes_value, (int, float)):
-            kb = bytes_value / 1024
-            if kb < 1:
-                return f"{bytes_value:.2f} B"
-            elif kb < 1024:
-                return f"{kb:.2f} KB"
-            mb = kb / 1024
-            if mb < 1024:
-                return f"{mb:.2f} MB"
-            gb = mb / 1024
-            return f"{gb:.2f} GB"
-        else:
-            return "0 B"  # Default value for non-numeric types
+        if isinstance(bytes_value, str):
+            return bytes_value  # Return as-is if it's already a string
+        if isinstance(bytes_value, float):
+            bytes_value = int(bytes_value)
+        abs_bytes = abs(bytes_value)
+        sign = "-" if bytes_value < 0 else ""
+        kb = abs_bytes / 1024
+        if kb < 1:
+            return f"{sign}{abs_bytes:.2f} B"
+        elif kb < 1024:
+            return f"{sign}{kb:.2f} KB"
+        mb = kb / 1024
+        if mb < 1024:
+            return f"{sign}{mb:.2f} MB"
+        gb = mb / 1024
+        return f"{sign}{gb:.2f} GB"
 
     def set_target_module(self, module_name, mode):
         self.target_module = module_name
         self.mode = mode
-        self.mode = mode
-        self.mode = mode
-        self.mode = mode
+        print(f"[blue]Target module set to: {module_name}, Mode: {mode}[/blue]")
 
     def load_data(self):
         profiles = defaultdict(
@@ -277,7 +298,7 @@ class FunctionProfiler:
                 for row in reader:
                     func_key = row["Function"]
                     profiles[func_key] = {
-                        "calls": int(row.get("Calls", 0)),  # Use the 'Calls' value from CSV, or 0 if not present
+                        "calls": int(row.get("Calls", 0)),
                         "total_time": float(row["Total Time"]),
                         "total_cpu": float(row["Total CPU"]),
                         "total_memory": float(row["Total Memory"]),
@@ -286,6 +307,7 @@ class FunctionProfiler:
                         "notes": row.get("Notes", ""),
                     }
         self.profiles = profiles
+        print(f"[green]Loaded {len(profiles)} profiles from {self.csv_file}[/green]")
         return profiles
 
     def save_data(self):
@@ -329,11 +351,9 @@ class FunctionProfiler:
                         f"{avg_io:.6f}",
                         data.get("notes", ""),
                     ])
-        return self.profiles
         print(f"[bold green]Profiling data saved to {self.csv_file}[/bold green]")
-        print(
-            "[bold] mbench [/bold] is distributed by Mbodi AI under the terms of the [MIT License](LICENSE)."
-        )
+        print("[bold] mbench [/bold] is distributed by Mbodi AI under the terms of the [MIT License](LICENSE).")
+        return self.profiles
 
     def profile(self, frame, event, arg):
         if event == "call":
@@ -345,7 +365,6 @@ class FunctionProfiler:
     def _get_func_key(self, frame):
         code = frame.f_code
         return f"{code.co_name}"
-        return f"{code.co_name}"
 
     def _get_gpu_usage(self):
         total_gpu_usage = 0
@@ -355,12 +374,15 @@ class FunctionProfiler:
                 total_gpu_usage += info.used
             except pynvml.NVMLError:
                 pass
+        print(f"[blue]Current GPU usage: {self.format_bytes(total_gpu_usage)}[/blue]")
         return total_gpu_usage
 
     def _get_io_usage(self):
         try:
             io = psutil.disk_io_counters()
-            return io.read_bytes + io.write_bytes if io else 0
+            usage = io.read_bytes + io.write_bytes if io else 0
+            print(f"[blue]Current I/O usage: {self.format_bytes(usage)}[/blue]")
+            return usage
         except Exception as e:
             console.print(f"[yellow]Warning: Unable to get I/O usage. Error: {e}[/yellow]")
             return 0
@@ -369,7 +391,6 @@ class FunctionProfiler:
         if frame.f_back is None:
             return None
         module_name = frame.f_globals.get("__name__")
-        # Check mode and determine profiling target
         if self.mode == "caller":
             if module_name != self.target_module:
                 return None
@@ -381,8 +402,7 @@ class FunctionProfiler:
         if func_key in self.profiler_functions:
             return None
         
-        # Always set 'test_func' key for testing purposes
-        self.current_calls['test_func'] = {
+        start_data = {
             "start_time": time.time(),
             "cpu_start": time.process_time(),
             "mem_start": psutil.virtual_memory().used,
@@ -390,16 +410,16 @@ class FunctionProfiler:
             "io_start": self._get_io_usage(),
         }
         
-        # Set the actual function key as well
+        self.current_calls['test_func'] = start_data
         if func_key != 'test_func':
-            self.current_calls[func_key] = self.current_calls['test_func']
+            self.current_calls[func_key] = start_data
         
+        print(f"[green]Started profiling {func_key}[/green]")
         return self.profile
 
     def _end_profile(self, frame):
         module_name = frame.f_globals.get("__name__")
 
-        # Check mode and determine profiling target
         if self.mode == "caller":
             if module_name != self.target_module:
                 return
@@ -426,7 +446,6 @@ class FunctionProfiler:
             gpu_usage = max(0, self._get_gpu_usage() - start_data["gpu_start"])
             io_usage = max(0, self._get_io_usage() - start_data["io_start"])
 
-            # Update global mean
             self.profiles[func_key]["total_time"] += duration
             self.profiles[func_key]["total_cpu"] += cpu_usage
             self.profiles[func_key]["total_memory"] += mem_usage
@@ -440,7 +459,7 @@ class FunctionProfiler:
             avg_gpu = self.profiles[func_key]["total_gpu"] / calls
             avg_io = self.profiles[func_key]["total_io"] / calls
             notes = self.profiles[func_key].get("notes", "")
-            # Print immediate profile
+
             display_profile_info(
                 name=func_key,
                 duration=duration,
@@ -458,6 +477,7 @@ class FunctionProfiler:
             )
 
             del self.current_calls[func_key]
+            print(f"[green]Finished profiling {func_key}[/green]")
 
         return self.profiles[func_key]["calls"]
 

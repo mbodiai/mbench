@@ -11,25 +11,38 @@ requires-python = ">=3.10"
 license = "apache-2.0"
 keywords = []
 authors = [
-{ name = "Mbodi AI", email = "info@mbodi.ai" },
+    { name = "Mbodi AI", email = "info@mbodi.ai" },
 ]
 classifiers = [
-"Development Status :: 4 - Beta",
-"Programming Language :: Python",
-"Programming Language :: Python :: 3.10",
-"Programming Language :: Python :: 3.11",
-"Programming Language :: Python :: 3.12",
-"Programming Language :: Python :: Implementation :: CPython",
-"Programming Language :: Python :: Implementation :: PyPy",
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "funkify",
-  "memory-profiler>=0.61.0",
-  "pandas==2.2.2",
-  "psutil>=5.9.0",
-  "pynvml==11.5.0",
-  "rich>=13.7.0",
+    "funkify",
+    "memory-profiler>=0.61.0",
+    "pandas==2.2.2",
+    "psutil>=5.9.0",
+    "pynvml==11.5.0",
+    "rich>=13.7.0",
 ]
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+addopts = "-v --cov=mbench --cov-report=term-missing"
+testpaths = ["tests"]
 
 [project.scripts]
 mbench = "mbench:main"
