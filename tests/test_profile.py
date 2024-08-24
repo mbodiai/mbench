@@ -142,6 +142,40 @@ class TestProfile(unittest.TestCase):
         test_func()
         self.assertTrue(mock_profiler.called)
 
+    @patch('mbench.profile.display_profile_info')
+    def test_min_duration(self, mock_display):
+        with profiling("short_block", min_duration=1):
+            time.sleep(0.1)
+        mock_display.assert_not_called()
+
+        with profiling("long_block", min_duration=1):
+            time.sleep(1.1)
+        mock_display.assert_called_once()
+
+    @patch('mbench.profile.display_profile_info')
+    def test_quiet_mode(self, mock_display):
+        with profiling("quiet_block", quiet=True):
+            pass
+        mock_display.assert_not_called()
+
+    def test_summary_mode(self):
+        profiler = FunctionProfiler()
+        profiler.set_summary_mode(True)
+
+        @profile
+        def test_func():
+            time.sleep(0.1)
+
+        test_func()
+        test_func()
+
+        with patch('mbench.profile.display_profile_info') as mock_display:
+            profiler.display_summary()
+            mock_display.assert_called_once()
+            # Check that the summary contains aggregated data for both calls
+            args, _ = mock_display.call_args
+            self.assertEqual(args[13], 2)  # calls should be 2
+
 class TestProfiling(unittest.TestCase):
 
     @patch('mbench.profile.FunctionProfiler')
@@ -171,6 +205,66 @@ class TestProfiling(unittest.TestCase):
         self.assertTrue(mock_profiler.called)
         mock_instance._start_profile.assert_called_once_with(mock_frame)
         mock_instance._end_profile.assert_called_once_with(mock_frame)
+
+    @patch('mbench.profile.console.print')
+    def test_display_profile_info(self, mock_print):
+        display_profile_info(
+            name="test_func",
+            duration=1.0,
+            cpu_usage=0.5,
+            mem_usage=1024,
+            gpu_usage=2048,
+            io_usage=4096,
+            avg_time=1.0,
+            avg_cpu=0.5,
+            avg_memory=1024,
+            avg_gpu=2048,
+            avg_io=4096,
+            calls=1,
+            min_duration=0.5,
+            quiet=False
+        )
+        mock_print.assert_called()
+
+        # Test with duration less than min_duration
+        mock_print.reset_mock()
+        display_profile_info(
+            name="test_func",
+            duration=0.4,
+            cpu_usage=0.2,
+            mem_usage=512,
+            gpu_usage=1024,
+            io_usage=2048,
+            avg_time=0.4,
+            avg_cpu=0.2,
+            avg_memory=512,
+            avg_gpu=1024,
+            avg_io=2048,
+            calls=1,
+            min_duration=0.5,
+            quiet=False
+        )
+        mock_print.assert_not_called()
+
+        # Test quiet mode
+        mock_print.reset_mock()
+        display_profile_info(
+            name="test_func",
+            duration=1.0,
+            cpu_usage=0.5,
+            mem_usage=1024,
+            gpu_usage=2048,
+            io_usage=4096,
+            avg_time=1.0,
+            avg_cpu=0.5,
+            avg_memory=1024,
+            avg_gpu=2048,
+            avg_io=4096,
+            calls=1,
+            min_duration=0.5,
+            quiet=True
+        )
+        mock_print.assert_not_called()
 
 if __name__ == '__main__':
     unittest.main()
