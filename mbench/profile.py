@@ -219,23 +219,25 @@ class FunctionProfiler:
 
         console.print("[bold blue]Profiling Summary:[/bold blue]")
         for func, data in self.profiles.items():
-            display_profile_info(
-                name=func,
-                duration=data['total_time'],
-                cpu_usage=data['total_cpu'],
-                mem_usage=data['total_memory'],
-                gpu_usage=data['total_gpu'],
-                io_usage=data['total_io'],
-                avg_time=data['total_time'] / data['calls'] if data['calls'] > 0 else 0,
-                avg_cpu=data['total_cpu'] / data['calls'] if data['calls'] > 0 else 0,
-                avg_memory=data['total_memory'] / data['calls'] if data['calls'] > 0 else 0,
-                avg_gpu=data['total_gpu'] / data['calls'] if data['calls'] > 0 else 0,
-                avg_io=data['total_io'] / data['calls'] if data['calls'] > 0 else 0,
-                calls=data['calls'],
-                notes=data.get('notes', ''),
-                quiet=False,  # Always show in summary
-                min_duration=0  # Show all in summary
-            )
+            calls = data['calls']
+            if calls > 0:
+                display_profile_info(
+                    name=func,
+                    duration=data['total_time'],
+                    cpu_usage=data['total_cpu'],
+                    mem_usage=data['total_memory'],
+                    gpu_usage=data['total_gpu'],
+                    io_usage=data['total_io'],
+                    avg_time=data['total_time'] / calls,
+                    avg_cpu=data['total_cpu'] / calls,
+                    avg_memory=data['total_memory'] / calls,
+                    avg_gpu=data['total_gpu'] / calls,
+                    avg_io=data['total_io'] / calls,
+                    calls=calls,
+                    notes=data.get('notes', ''),
+                    quiet=False,  # Always show in summary
+                    min_duration=0  # Show all in summary
+                )
 
     def format_bytes(self, bytes_value):
         kb = bytes_value / 1024
@@ -497,9 +499,10 @@ def profile(func):
             _profiler_instance.set_target_module(caller_module, "caller")
             sys.setprofile(_profiler_instance.profile)
             try:
-                _profiler_instance._start_profile(sys._getframe())
+                frame = sys._getframe(1)  # Get the caller's frame
+                _profiler_instance._start_profile(frame)
                 result = func(*args, **kwargs)
-                _profiler_instance._end_profile(sys._getframe())
+                _profiler_instance._end_profile(frame)
                 return result
             finally:
                 sys.setprofile(None)  # Disable profiling after function execution
@@ -528,7 +531,8 @@ def profiling(name="block", quiet=False, min_duration=0.1):
             "gpu_start": _profiler_instance._get_gpu_usage(),
             "io_start": _profiler_instance._get_io_usage(),
         }
-        _profiler_instance._start_profile(sys._getframe())
+        frame = sys._getframe(1)  # Get the caller's frame
+        _profiler_instance._start_profile(frame)
     elif not printed_profile:
         printed_profile = True
         console.print("Profiling is not active. Set [bold pink]MBENCH=1[/bold pink] to enable profiling.")
@@ -536,7 +540,8 @@ def profiling(name="block", quiet=False, min_duration=0.1):
         yield  # Allow the code block to execute
     finally:
         if os.getenv("MBENCH", "1") == "1":  # Default to "1" if not set
-            _profiler_instance._end_profile(sys._getframe())
+            frame = sys._getframe(1)  # Get the caller's frame
+            _profiler_instance._end_profile(frame)
             end_time = time.time()
             duration = end_time - start_data["start_time"]
             cpu_usage = time.process_time() - start_data["cpu_start"]
@@ -555,8 +560,8 @@ def profiling(name="block", quiet=False, min_duration=0.1):
             profile_data["total_gpu"] += gpu_usage
             profile_data["total_io"] += io_usage
 
-            # Print immediate profile if not in summary mode
-            if not _profiler_instance.summary_mode:
+            # Print immediate profile if not in summary mode and duration is above min_duration
+            if not _profiler_instance.summary_mode and duration >= min_duration:
                 calls = profile_data["calls"]
                 avg_time = profile_data["total_time"] / calls
                 avg_cpu = profile_data["total_cpu"] / calls
