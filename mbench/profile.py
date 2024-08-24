@@ -134,14 +134,14 @@ def display_profile_info(
     calls,
     notes=None,
 ):
-    table = Table(title=f"Profile Information for {name}")
+    table = Table(title=f"[bold blue]Profile Information for [cyan]{name}[/cyan][/bold blue]", border_style="bold")
 
     table.add_column("Metric", justify="right", style="cyan", no_wrap=True)
-    table.add_column("Value", style="magenta")
+    table.add_column("Value", style="yellow")
 
-    table.add_row("Duration", f"{duration:.6f} seconds")
+    table.add_row("[bold]Duration[/bold]", f"[bold green]{duration:.6f} seconds[/bold green]")
     table.add_row("CPU time", f"{cpu_usage:.6f} seconds")
-    table.add_row("Memory usage", mem_usage if isinstance(mem_usage, str) else FunctionProfiler().format_bytes(mem_usage))
+    table.add_row("[bold]Memory usage[/bold]", f"[bold magenta]{mem_usage if isinstance(mem_usage, str) else FunctionProfiler().format_bytes(mem_usage)}[/bold magenta]")
     table.add_row("GPU usage", gpu_usage if isinstance(gpu_usage, str) else FunctionProfiler().format_bytes(gpu_usage))
     table.add_row("I/O usage", io_usage if isinstance(io_usage, str) else FunctionProfiler().format_bytes(io_usage))
     table.add_row("Avg Duration", f"{avg_time:.6f} seconds" if isinstance(avg_time, (int, float)) else str(avg_time))
@@ -149,9 +149,12 @@ def display_profile_info(
     table.add_row("Avg Memory usage", avg_memory if isinstance(avg_memory, str) else FunctionProfiler().format_bytes(avg_memory))
     table.add_row("Avg GPU usage", avg_gpu if isinstance(avg_gpu, str) else FunctionProfiler().format_bytes(avg_gpu))
     table.add_row("Avg I/O usage", avg_io if isinstance(avg_io, str) else FunctionProfiler().format_bytes(avg_io))
-    table.add_row("Total calls", f"{calls}")
-    table.add_row("Notes", f"{notes or 'None'}")
+    table.add_row("[bold]Total calls[/bold]", f"[bold red]{calls}[/bold red]")
+    if notes:
+        table.add_row("Notes", f"[italic]{notes}[/italic]")
+
     console.print(table)
+    console.print("")  # Add an empty line for better separation between profile outputs
 
 
 # # Example usage
