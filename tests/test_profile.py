@@ -142,10 +142,12 @@ class TestProfile(unittest.TestCase):
             mock_instance._get_gpu_usage.return_value = 0
             mock_instance.format_bytes.return_value = "0 B"
             
-            @profile
-            def test_func():
-                pass
-            test_func()
+            # Patch the _profiler_instance to use our mock
+            with patch('mbench.profile._profiler_instance', mock_instance):
+                @profile
+                def test_func():
+                    pass
+                test_func()
             
             # Assert that the profiler was used
             mock_instance._start_profile.assert_called()
@@ -177,14 +179,16 @@ class TestProfile(unittest.TestCase):
             mock_instance._get_gpu_usage.return_value = 0
             mock_instance.format_bytes.return_value = "0 B"
             
-            profiler = mock_instance
-            profiler.set_summary_mode(True)
+            # Patch the _profiler_instance to use our mock
+            with patch('mbench.profile._profiler_instance', mock_instance):
+                profiler = mock_instance
+                profiler.set_summary_mode(True)
 
-            @profile
-            def test_func():
-                time.sleep(0.1)
+                @profile
+                def test_func():
+                    time.sleep(0.1)
 
-            test_func()
+                test_func()
             
             # Assert that the summary mode was used
             profiler.display_summary.assert_called()
