@@ -136,21 +136,23 @@ class TestProfile(unittest.TestCase):
 
     @patch('mbench.profile.FunctionProfiler')
     def test_profile(self, mock_profiler):
-        @profile
-        def test_func():
-            pass
-        test_func()
-        self.assertTrue(mock_profiler.called)
+        with patch.dict(os.environ, {'MBENCH': '1'}):
+            @profile
+            def test_func():
+                pass
+            test_func()
+            self.assertTrue(mock_profiler.called)
 
     @patch('mbench.profile.display_profile_info')
     def test_min_duration(self, mock_display):
-        with profiling("short_block", min_duration=1):
-            time.sleep(0.1)
-        mock_display.assert_not_called()
+        with patch.dict(os.environ, {'MBENCH': '1'}):
+            with profiling("short_block", min_duration=1):
+                time.sleep(0.1)
+            mock_display.assert_not_called()
 
-        with profiling("long_block", min_duration=1):
-            time.sleep(1.1)
-        mock_display.assert_called_once()
+            with profiling("long_block", min_duration=1):
+                time.sleep(1.1)
+            mock_display.assert_called_once()
 
     @patch('mbench.profile.display_profile_info')
     def test_quiet_mode(self, mock_display):
@@ -159,22 +161,23 @@ class TestProfile(unittest.TestCase):
         mock_display.assert_not_called()
 
     def test_summary_mode(self):
-        profiler = FunctionProfiler()
-        profiler.set_summary_mode(True)
+        with patch.dict(os.environ, {'MBENCH': '1'}):
+            profiler = FunctionProfiler()
+            profiler.set_summary_mode(True)
 
-        @profile
-        def test_func():
-            time.sleep(0.1)
+            @profile
+            def test_func():
+                time.sleep(0.1)
 
-        test_func()
-        test_func()
+            test_func()
+            test_func()
 
-        with patch('mbench.profile.display_profile_info') as mock_display:
-            profiler.display_summary()
-            mock_display.assert_called_once()
-            # Check that the summary contains aggregated data for both calls
-            args, _ = mock_display.call_args
-            self.assertEqual(args[13], 2)  # calls should be 2
+            with patch('mbench.profile.display_profile_info') as mock_display:
+                profiler.display_summary()
+                mock_display.assert_called_once()
+                # Check that the summary contains aggregated data for both calls
+                args, _ = mock_display.call_args
+                self.assertEqual(args[13], 2)  # calls should be 2
 
 class TestProfiling(unittest.TestCase):
 
