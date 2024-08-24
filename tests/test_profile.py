@@ -37,13 +37,16 @@ def test_save_data(profiler, tmp_path):
     content = csv_file.read_text()
     assert 'test_func,1,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,1.000000,' in content
 
-@pytest.mark.parametrize("mock_used, expected", [
-    (1024, 1024),
-    (2048, 2048),
-    (0, 0),
+@pytest.mark.parametrize("mock_used, num_gpus, expected", [
+    (1024, 1, 1024),
+    (1024, 8, 8192),
+    (2048, 1, 2048),
+    (2048, 8, 16384),
+    (0, 1, 0),
 ])
-def test_get_gpu_usage(profiler, mock_used, expected):
-    with patch('pynvml.nvmlDeviceGetMemoryInfo') as mock_nvml:
+def test_get_gpu_usage(profiler, mock_used, num_gpus, expected):
+    with patch('pynvml.nvmlDeviceGetMemoryInfo') as mock_nvml, \
+         patch.object(profiler, 'num_gpus', num_gpus):
         mock_nvml.return_value.used = mock_used
         assert profiler._get_gpu_usage() == expected
 
@@ -71,10 +74,12 @@ def test_start_profile(profiler):
         assert profiler.current_calls['test_func']['start_time'] == 1.0
 
 def test_end_profile(profiler):
+    profiler.profiles.clear()  # Reset profiles before the test
     with patch('time.time', return_value=2.0), \
          patch('time.process_time', return_value=2.0), \
          patch('psutil.virtual_memory', return_value=MagicMock(used=2048)), \
-         patch('pynvml.nvmlDeviceGetMemoryInfo', return_value=MagicMock(used=2048)):
+         patch('pynvml.nvmlDeviceGetMemoryInfo', return_value=MagicMock(used=2048)), \
+         patch.object(profiler, 'num_gpus', 1):  # Set num_gpus to 1 for this test
         profiler.current_calls['test_func'] = {
             'start_time': 1.0,
             'cpu_start': 1.0,
@@ -157,6 +162,17 @@ def test_summary_mode():
         mock_instance._get_gpu_usage.return_value = 0
         mock_instance.format_bytes.return_value = "0 B"
         mock_instance.summary_mode = True
+        mock_instance.profiles = {
+            'test_func': {
+                'calls': 1,
+                'total_time': 0.1,
+                'total_cpu': 0.1,
+                'total_memory': 1024,
+                'total_gpu': 0,
+                'total_io': 0,
+                'notes': ''
+            }
+        }
         
         @profile
         def test_func():
