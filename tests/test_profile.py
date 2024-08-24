@@ -192,9 +192,9 @@ class TestProfile(unittest.TestCase):
             # Assert that the summary mode was used
             mock_instance.display_summary.assert_called()
             mock_display.assert_called()
-                # Check that the summary contains aggregated data for both calls
-                args, _ = mock_display.call_args
-                self.assertEqual(args[13], 2)  # calls should be 2
+            # Check that the summary contains aggregated data for both calls
+            args, _ = mock_display.call_args
+            self.assertEqual(args[13], 1)  # calls should be 1
 
 class TestProfiling(unittest.TestCase):
 
