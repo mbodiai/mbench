@@ -238,6 +238,7 @@ class FunctionProfiler:
                     quiet=False,  # Always show in summary
                     min_duration=0  # Show all in summary
                 )
+        self.profiles.clear()  # Clear profiles after displaying summary
 
     def format_bytes(self, bytes_value):
         kb = bytes_value / 1024
@@ -491,19 +492,14 @@ def profile(func):
     """Decorator to profile a specific function."""
 
     def wrapper(*args, **kwargs):
-        global _profiler_instance, printed_profile
+        global _profiler_instance
         if os.environ.get("MBENCH", "1") == "1":  # Default to "1" if not set
             if _profiler_instance is None:
                 _profiler_instance = FunctionProfiler()
             caller_module = func.__module__
             _profiler_instance.set_target_module(caller_module, "caller")
-            frame = sys._getframe(1)  # Get the caller's frame
-            _profiler_instance._start_profile(frame)
-            try:
-                result = func(*args, **kwargs)
-                return result
-            finally:
-                _profiler_instance._end_profile(frame)
+            with profiling(func.__name__):
+                return func(*args, **kwargs)
         else:
             return func(*args, **kwargs)
 
@@ -552,8 +548,8 @@ def profiling(name="block", quiet=False, min_duration=0.1):
             profile_data["total_gpu"] += gpu_usage
             profile_data["total_io"] += io_usage
 
-            # Print immediate profile if not in summary mode and duration is above min_duration
-            if not _profiler_instance.summary_mode and duration >= min_duration:
+            # Print immediate profile if not in summary mode
+            if not _profiler_instance.summary_mode:
                 calls = profile_data["calls"]
                 avg_time = profile_data["total_time"] / calls
                 avg_cpu = profile_data["total_cpu"] / calls
