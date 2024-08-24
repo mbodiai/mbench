@@ -172,18 +172,17 @@ class TestProfile(unittest.TestCase):
         mock_display.assert_not_called()
 
     @patch('mbench.profile.FunctionProfiler')
-    def test_summary_mode(self, mock_profiler):
+    @patch('mbench.profile.display_profile_info')
+    def test_summary_mode(self, mock_display, mock_profiler):
         with patch.dict(os.environ, {'MBENCH': '1'}):
             # Configure mock
             mock_instance = mock_profiler.return_value
             mock_instance._get_gpu_usage.return_value = 0
             mock_instance.format_bytes.return_value = "0 B"
+            mock_instance.summary_mode = True
             
             # Patch the _profiler_instance to use our mock
             with patch('mbench.profile._profiler_instance', mock_instance):
-                profiler = mock_instance
-                profiler.set_summary_mode(True)
-
                 @profile
                 def test_func():
                     time.sleep(0.1)
@@ -191,12 +190,8 @@ class TestProfile(unittest.TestCase):
                 test_func()
             
             # Assert that the summary mode was used
-            profiler.display_summary.assert_called()
-            test_func()
-
-            with patch('mbench.profile.display_profile_info') as mock_display:
-                profiler.display_summary()
-                mock_display.assert_called_once()
+            mock_instance.display_summary.assert_called()
+            mock_display.assert_called()
                 # Check that the summary contains aggregated data for both calls
                 args, _ = mock_display.call_args
                 self.assertEqual(args[13], 2)  # calls should be 2

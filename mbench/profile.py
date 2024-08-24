@@ -508,6 +508,30 @@ def profile(func):
 
     return wrapper
 
+def display_summary(self):
+    console.print("[bold blue]Profiling Summary:[/bold blue]")
+    for func, data in self.profiles.items():
+        calls = data['calls']
+        if calls > 0:
+            display_profile_info(
+                name=func,
+                duration=data['total_time'],
+                cpu_usage=data['total_cpu'],
+                mem_usage=data['total_memory'],
+                gpu_usage=data['total_gpu'],
+                io_usage=data['total_io'],
+                avg_time=data['total_time'] / calls,
+                avg_cpu=data['total_cpu'] / calls,
+                avg_memory=data['total_memory'] / calls,
+                avg_gpu=data['total_gpu'] / calls,
+                avg_io=data['total_io'] / calls,
+                calls=calls,
+                notes=data.get('notes', ''),
+                quiet=False,  # Always show in summary
+                min_duration=0  # Show all in summary
+            )
+    self.profiles.clear()  # Clear profiles after displaying summary
+
 
 
 @contextmanager
