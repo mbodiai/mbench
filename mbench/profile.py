@@ -89,17 +89,34 @@ def main():
     # Display summary of profiling results
     console.print("[bold blue]Profiling Summary:[/bold blue]")
     for func, data in results.items():
-        console.print(f"[cyan]Function: {func}[/cyan]")
-        console.print(f"  Calls: {data['calls']}")
-        console.print(f"  Total Time: {data['total_time']:.6f} seconds")
-        if data['calls'] > 0:
-            console.print(f"  Avg Time: {data['total_time'] / data['calls']:.6f} seconds")
-        else:
-            console.print("  Avg Time: N/A (no calls)")
-        console.print(f"  Total CPU: {data['total_cpu']:.6f} seconds")
-        console.print(f"  Total Memory: {profiler.format_bytes(data['total_memory'])}")
-        console.print(f"  Total GPU: {profiler.format_bytes(data['total_gpu'])}")
-        console.print(f"  Total IO: {profiler.format_bytes(data['total_io'])}")
+        calls = data['calls']
+        total_time = data['total_time']
+        total_cpu = data['total_cpu']
+        total_memory = data['total_memory']
+        total_gpu = data['total_gpu']
+        total_io = data['total_io']
+        
+        avg_time = total_time / calls if calls > 0 else 0
+        avg_cpu = total_cpu / calls if calls > 0 else 0
+        avg_memory = total_memory / calls if calls > 0 else 0
+        avg_gpu = total_gpu / calls if calls > 0 else 0
+        avg_io = total_io / calls if calls > 0 else 0
+        
+        display_profile_info(
+            name=func,
+            duration=total_time,
+            cpu_usage=total_cpu,
+            mem_usage=total_memory,
+            gpu_usage=total_gpu,
+            io_usage=total_io,
+            avg_time=avg_time,
+            avg_cpu=avg_cpu,
+            avg_memory=avg_memory,
+            avg_gpu=avg_gpu,
+            avg_io=avg_io,
+            calls=calls,
+            notes=data.get('notes', '')
+        )
 
 
 def display_profile_info(
