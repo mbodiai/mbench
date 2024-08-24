@@ -521,8 +521,8 @@ def profiling(name="block", quiet=False, min_duration=0.1):
     if os.environ.get("MBENCH", "1") == "1":  # Default to "1" if not set
         if _profiler_instance is None:
             _profiler_instance = FunctionProfiler()
-            _profiler_instance.set_target_module("__main__", "caller")
-            sys.setprofile(_profiler_instance.profile)
+        _profiler_instance.set_target_module("__main__", "caller")
+        sys.setprofile(_profiler_instance.profile)
 
         start_data = {
             "start_time": time.time(),
