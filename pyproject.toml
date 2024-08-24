@@ -41,7 +41,7 @@ select = ["E", "F", "B", "I"]
 ignore = ["E501"]
 
 [tool.pytest.ini_options]
-addopts = "-v --cov=mbench --cov-report=term-missing"
+addopts = "-v"
 testpaths = ["tests"]
 
 [project.scripts]
