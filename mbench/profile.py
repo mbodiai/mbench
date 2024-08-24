@@ -368,7 +368,9 @@ class FunctionProfiler:
 
     def _get_gpu_usage(self):
         total_gpu_usage = 0
-        for handle in self.gpu_handles:
+        for i, handle in enumerate(self.gpu_handles):
+            if i >= self.num_gpus:
+                break
             try:
                 info = pynvml.nvmlDeviceGetMemoryInfo(handle)
                 total_gpu_usage += info.used
@@ -520,8 +522,6 @@ def profile(func):
             _profiler_instance.set_target_module(caller_module, "caller")
             with profiling(func.__name__, min_duration=0):  # Set min_duration to 0 to always display
                 result = func(*args, **kwargs)
-            if _profiler_instance.summary_mode:
-                _profiler_instance.display_summary()
             return result
         else:
             return func(*args, **kwargs)

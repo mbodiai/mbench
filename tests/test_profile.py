@@ -164,10 +164,10 @@ def test_summary_mode():
         mock_instance.summary_mode = True
         mock_instance.profiles = {
             'test_func': {
-                'calls': 1,
-                'total_time': 0.1,
-                'total_cpu': 0.1,
-                'total_memory': 1024,
+                'calls': 0,
+                'total_time': 0,
+                'total_cpu': 0,
+                'total_memory': 0,
                 'total_gpu': 0,
                 'total_io': 0,
                 'notes': ''
@@ -180,7 +180,6 @@ def test_summary_mode():
 
         test_func()
             
-        mock_instance.display_summary.assert_called_once()
         mock_display.assert_called_once()
             
         args, kwargs = mock_display.call_args
