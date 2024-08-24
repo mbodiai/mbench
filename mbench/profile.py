@@ -238,16 +238,19 @@ class FunctionProfiler:
         self.profiles.clear()  # Clear profiles after displaying summary
 
     def format_bytes(self, bytes_value):
-        kb = bytes_value / 1024
-        if kb < 1:
-            return f"{bytes_value:.2f} B"
-        elif kb < 1024:
-            return f"{kb:.2f} KB"
-        mb = kb / 1024
-        if mb < 1024:
-            return f"{mb:.2f} MB"
-        gb = mb / 1024
-        return f"{gb:.2f} GB"
+        if isinstance(bytes_value, (int, float)):
+            kb = bytes_value / 1024
+            if kb < 1:
+                return f"{bytes_value:.2f} B"
+            elif kb < 1024:
+                return f"{kb:.2f} KB"
+            mb = kb / 1024
+            if mb < 1024:
+                return f"{mb:.2f} MB"
+            gb = mb / 1024
+            return f"{gb:.2f} GB"
+        else:
+            return "0 B"  # Default value for non-numeric types
 
     def set_target_module(self, module_name, mode):
         self.target_module = module_name

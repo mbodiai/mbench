@@ -137,10 +137,19 @@ class TestProfile(unittest.TestCase):
     @patch('mbench.profile.FunctionProfiler')
     def test_profile(self, mock_profiler):
         with patch.dict(os.environ, {'MBENCH': '1'}):
+            # Configure mock
+            mock_instance = mock_profiler.return_value
+            mock_instance._get_gpu_usage.return_value = 0
+            mock_instance.format_bytes.return_value = "0 B"
+            
             @profile
             def test_func():
                 pass
             test_func()
+            
+            # Assert that the profiler was used
+            mock_instance._start_profile.assert_called()
+            mock_instance._end_profile.assert_called()
             self.assertTrue(mock_profiler.called)
 
     @patch('mbench.profile.display_profile_info')
@@ -160,9 +169,15 @@ class TestProfile(unittest.TestCase):
             pass
         mock_display.assert_not_called()
 
-    def test_summary_mode(self):
+    @patch('mbench.profile.FunctionProfiler')
+    def test_summary_mode(self, mock_profiler):
         with patch.dict(os.environ, {'MBENCH': '1'}):
-            profiler = FunctionProfiler()
+            # Configure mock
+            mock_instance = mock_profiler.return_value
+            mock_instance._get_gpu_usage.return_value = 0
+            mock_instance.format_bytes.return_value = "0 B"
+            
+            profiler = mock_instance
             profiler.set_summary_mode(True)
 
             @profile
@@ -170,6 +185,9 @@ class TestProfile(unittest.TestCase):
                 time.sleep(0.1)
 
             test_func()
+            
+            # Assert that the summary mode was used
+            profiler.display_summary.assert_called()
             test_func()
 
             with patch('mbench.profile.display_profile_info') as mock_display:
