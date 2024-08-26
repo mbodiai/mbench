@@ -94,4 +94,7 @@ target/
 # Misc
 *.swp
 *.swo
+<<<<<<< HEAD
 .aider*
+=======
+>>>>>>> 9caddfa4a3c5301a64f24efe60382ed55af85c9c
