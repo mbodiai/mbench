@@ -579,7 +579,7 @@ def profiling(name="block", quiet=False):
             "mem_start": _get_memory_usage(),
             "gpu_start": gpu_usage,
             "gpus_start": gpu_usages,
-            "io_start": _profiler_instance._get_io_usage(),
+            "io_start": _get_io_usage(),
         }
         _profiler_instance._start_profile(sys._getframe())
     elif not printed_profile:
@@ -597,7 +597,7 @@ def profiling(name="block", quiet=False):
             mem_usage = psutil.virtual_memory().used - start_data["mem_start"]
             gpu_usage = gpu_usage - start_data["gpu_start"]
             gpu_usages = [gpu - start_data["gpus_start"][i] for i,gpu in enumerate(gpu_usages)]
-            io_usage = _profiler_instance._get_io_usage() - start_data["io_start"]
+            io_usage = _get_io_usage() - start_data["io_start"]
 
             # Update profiler data
             if name not in _profiler_instance.profiles:
