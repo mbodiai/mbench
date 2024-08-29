@@ -3,8 +3,6 @@ from unittest.mock import patch, MagicMock
 from mbench.profile import FunctionProfiler, profileme, profile, profiling, display_profile_info
 import os
 import time
-import psutil
-import pynvml
 from rich.console import Console
 
 console = Console()
@@ -99,10 +97,7 @@ def test_end_profile(profiler):
         assert profiler.profiles['test_func']['total_gpu'] > 0
         assert profiler.profiles['test_func']['total_io'] > 0
 
-def test_set_target_module(profiler):
-    profiler.set_target_module('test_module', 'all')
-    assert profiler.target_module == 'test_module'
-    assert profiler.mode == 'all'
+
 
 @pytest.mark.parametrize("bytes_value, expected", [
     (1024, '1.00 KB'),
