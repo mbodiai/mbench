@@ -44,7 +44,7 @@ def flush():
     # Clear the in-memory file content
     in_memory_file.truncate(0)
     in_memory_file.seek(0)
-
+import asyncio
 
 def run_with_timeout(func, timeout=2.0):
     async def run_func():
@@ -213,6 +213,22 @@ def display_profile_info(
     console.print("")  # Add an empty line for better separation between profile outputs
 
 
+# # Example usage
+# display_profile_info(
+#     name="ExampleBlock",
+#     duration=0.123456,
+#     cpu_usage=0.654321,
+#     mem_usage=1024 * 1024,
+#     gpu_usage=2048 * 1024,
+#     io_usage=512 * 1024,
+#     avg_time=0.111111,
+#     avg_cpu=0.222222,
+#     avg_memory=1024 * 512,
+    #     avg_gpu=2048 * 512,
+#     avg_gpu=2048 * 512,
+#     avg_io=512 * 256,
+#     calls=42,
+# )
 
 
 class FunctionProfiler:

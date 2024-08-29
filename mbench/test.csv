@@ -1,0 +1,2 @@
+Function,Calls,Total Time,Total CPU,Total Memory,Total GPU,Total IO,Avg Duration,Avg CPU Usage,Avg Memory Usage,Avg GPU Usage,Avg IO Usage,Notes
+test_func,1,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,Test note

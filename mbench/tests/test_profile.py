@@ -24,7 +24,7 @@ class TestFunctionProfiler(unittest.TestCase):
             "total_io": 200,
             "notes": "Test note",
         }
-        self.profiler.save_data()
+        self.profiler.save_and_print_data()
 
         # Read the saved data
         with open(self.profiler.csv_file, "r") as f:
