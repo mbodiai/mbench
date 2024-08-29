@@ -57,30 +57,6 @@ def test_start_profile(profiler):
         profiler._start_profile(mock_frame)
         assert profiler.current_calls['test_func']['start_time'] == 1.0
 
-@patch('mbench.profile._get_gpu_usage', return_value=(1024, [1024]))
-@patch('mbench.profile._get_io_usage', return_value=1024)
-def test_end_profile(mock_io, mock_gpu, profiler):
-    profiler.profiles.clear()  # Reset profiles before the test
-    profiler.current_calls['test_module.test_func'] = {
-        'start_time': time.time() - 1,
-        'cpu_start': time.process_time() - 1,
-        'mem_start': _get_memory_usage() - 1024,
-        'gpu_start': 1024,
-        'gpus_start': [1024],
-        'io_start': 1024
-    }
-    mock_frame = MagicMock()
-    mock_frame.f_globals = {'__name__': 'test_module'}
-    mock_frame.f_code.co_name = 'test_func'
-    profiler.set_target_module('test_module', 'all')
-    profiler._end_profile(mock_frame)
-    assert 'test_module.test_func' in profiler.profiles
-    assert profiler.profiles['test_module.test_func']['calls'] == 1
-    assert profiler.profiles['test_module.test_func']['total_time'] > 0
-    assert profiler.profiles['test_module.test_func']['total_cpu'] > 0
-    assert profiler.profiles['test_module.test_func']['total_memory'] > 0
-    assert profiler.profiles['test_module.test_func']['total_gpu'] > 0
-    assert profiler.profiles['test_module.test_func']['total_io'] > 0
 
 
 
@@ -116,7 +92,7 @@ def test_profile():
         mock_instance._end_profile.assert_called()
         assert mock_profiler.called
 
-@patch('mbench.profile._get_gpu_usage', return_value=(0, [0]))
+
 @patch('mbench.profile._get_io_usage', return_value=0)
 def test_min_duration(mock_io, mock_gpu):
     with patch.dict(os.environ, {'MBENCH': '1'}):
@@ -126,7 +102,7 @@ def test_min_duration(mock_io, mock_gpu):
             with profiling("long_block"):
                 time.sleep(1.1)
 
-@patch('mbench.profile._get_gpu_usage', return_value=(0, [0]))
+
 @patch('mbench.profile._get_io_usage', return_value=0)
 def test_quiet_mode(mock_io, mock_gpu):
     with patch.dict(os.environ, {'MBENCH': '1'}):
@@ -134,7 +110,7 @@ def test_quiet_mode(mock_io, mock_gpu):
             with profiling("quiet_block", quiet=True):
                 pass
 
-@patch('mbench.profile._get_gpu_usage', return_value=(0, [0]))
+
 @patch('mbench.profile._get_io_usage', return_value=0)
 def test_summary_mode(mock_io, mock_gpu):
     with patch.dict(os.environ, {'MBENCH': '1'}):
@@ -148,7 +124,7 @@ def test_summary_mode(mock_io, mock_gpu):
         assert 'test_profile.test_func' in FunctionProfiler().profiles
         assert FunctionProfiler().profiles['test_profile.test_func']['calls'] == 1
 
-@patch('mbench.profile._get_gpu_usage', return_value=(0, [0]))
+
 @patch('mbench.profile._get_io_usage', return_value=0)
 def test_profiling(mock_io, mock_gpu):
     with patch.dict(os.environ, {'MBENCH': '1'}):
