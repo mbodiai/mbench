@@ -11,9 +11,9 @@ from .profile import main, profile, profileme, profiling
 __all__ = ["profileme", "profiling", "profile", "mbench"]
 
 @funkify
-def mbench(mode: Literal["caller", "callee"] = "caller"):
+def mbench(when: Literal["calling", "called"] = "calling") -> None:
     """Profile the code"""
-    return profileme(mode)
+    return profileme(when)
 
 if __name__ == '__main__':
     main()
