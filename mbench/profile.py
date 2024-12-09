@@ -5,6 +5,7 @@
 
 import asyncio
 import atexit
+from collections.abc import Callable
 import csv
 import io
 import os
@@ -15,9 +16,10 @@ from collections import defaultdict
 from contextlib import contextmanager
 from pathlib import Path
 from types import FrameType
+from typing import overload
 
 import psutil
-import pynvml
+
 from rich import print
 from rich.console import Console
 from rich.table import Table
@@ -25,7 +27,41 @@ from typing_extensions import Literal
 
 nvml_lock = threading.Lock()
 in_memory_file = io.StringIO()
+_printed = False
+def _has_gpu():
+    """Check if the system has a GPU available."""
+    try:
+        import pynvml
+    except ImportError:
+        if sys.platform == "darwin":
+            return
+        global _printed
+        if not _printed:
+            _printed = True
+            print("[yellow]Warning: pynvml is not installed. GPU usage will not be tracked.[/yellow]")
+    try:
+  
+        pynvml.nvmlInit()
+        device_count = pynvml.nvmlDeviceGetCount()
+        pynvml.nvmlShutdown()
+        return device_count > 0
+    except Exception as e:
+        return False
 
+def _get_gpu_handles(self):
+    if not _has_gpu():
+        return 0, []
+    try:
+        pynvml.nvmlInit()
+
+        c = pynvml.nvmlDeviceGetCount()
+        handles = [pynvml.nvmlDeviceGetHandleByIndex(i) for i in range(self.num_gpus)]
+        atexit.register(pynvml.nvmlShutdown)
+        return c, handles
+    except pynvml.NVMLError:
+        print("[yellow]Warning: Unable to initialize GPU monitoring.[/yellow]")
+        return 0, []
+    
 # Create a Rich console object that writes to the in-memory file
 console = Console(file=in_memory_file, force_terminal=True)
 
@@ -45,6 +81,8 @@ def flush():
     in_memory_file.truncate(0)
     in_memory_file.seek(0)
 import asyncio
+
+     
 
 def run_with_timeout(func, timeout=2.0):
     async def run_func():
@@ -92,147 +130,6 @@ class FunctionProfiler:
         gb = mb / 1024
         return f"{sign}{gb:.2f} GB"
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(FunctionProfiler, cls).__new__(cls)
-            cls._instance.initialize()
-        return cls._instance
-
-import subprocess
-
-def main():
-    if len(sys.argv) < 3:
-        console.print("[bold red]Error: Please provide a path and a command to profile.[/bold red]")
-        console.print("Usage: mbench <path> <command>")
-        sys.exit(1)
-    
-    path = sys.argv[1]
-    command = " ".join(sys.argv[2:])
-    
-    console.print(f"[bold green]Profiling path: {path}[/bold green]")
-    console.print(f"[bold green]Command to profile: {command}[/bold green]")
-    
-    # Set up profiling
-    profiler = FunctionProfiler()
-    profiler.set_target_module("__main__", "called")
-    
-    # Change to the specified directory
-    original_dir = os.getcwd()
-    os.chdir(path)
-    
-    try:
-        # Run the command with profiling
-        console.print("[bold yellow]Starting command execution...[/bold yellow]")
-        start_time = time.time()
-        env = os.environ.copy()
-        env['PYTHONPATH'] = f"{os.getcwd()}:{env.get('PYTHONPATH', '')}"
-        process = subprocess.Popen(f"python -m mbench.wrapper {command}", shell=True, env=env)
-        process.wait()
-        end_time = time.time()
-        console.print(f"[bold yellow]Command execution completed in {end_time - start_time:.2f} seconds[/bold yellow]")
-    finally:
-        # Change back to the original directory
-        os.chdir(original_dir)
-    
-    # Load and display results
-    results = profiler.load_data()
-    console.print("[bold green]Profiling completed. Results saved to mbench_profile.csv[/bold green]")
-    
-    # Display summary of profiling results
-    console.print("[bold blue]Profiling Summary:[/bold blue]")
-    for func, data in results.items():
-        calls = data['calls']
-        total_time = data['total_time']
-        total_cpu = data['total_cpu']
-        total_memory = data['total_memory']
-        total_gpu = data['total_gpu']
-        total_io = data['total_io']
-        
-        avg_time = total_time / calls if calls > 0 else 0
-        avg_cpu = total_cpu / calls if calls > 0 else 0
-        avg_memory = total_memory / calls if calls > 0 else 0
-        avg_gpu = total_gpu / calls if calls > 0 else 0
-        avg_io = total_io / calls if calls > 0 else 0
-        
-        display_profile_info(
-            name=func,
-            duration=total_time,
-            cpu_usage=total_cpu,
-            mem_usage=total_memory,
-            gpu_usage=total_gpu,
-            io_usage=total_io,
-            avg_time=avg_time,
-            avg_cpu=avg_cpu,
-            avg_memory=avg_memory,
-            avg_gpu=avg_gpu,
-            avg_io=avg_io,
-            calls=calls,
-            notes=data.get('notes', '')
-        )
-
-
-def display_profile_info(
-    name,
-    duration,
-    cpu_usage,
-    mem_usage,
-    gpu_usage,
-    io_usage,
-    avg_time,
-    avg_cpu,
-    avg_memory,
-    avg_gpu,
-    avg_io,
-    calls,
-    notes=None,
-    avg_gpus = None,
-    gpu_usages = None,
-):
-    table = Table(title=f"[bold blue]Profile Information for [cyan]{name}[/cyan][/bold blue]", border_style="bold")
-
-    table.add_column("Metric", justify="right", style="cyan", no_wrap=True)
-    table.add_column("Value", style="yellow")
-
-    table.add_row("[bold]Duration[/bold]", f"[bold green]{duration:.6f} seconds[/bold green]")
-    table.add_row("CPU time", f"{cpu_usage:.6f} seconds")
-    table.add_row("[bold]Memory usage[/bold]", f"[bold magenta]{mem_usage if isinstance(mem_usage, str) else FunctionProfiler().format_bytes(mem_usage)}[/bold magenta]")
-    table.add_row("GPU usage", gpu_usage if isinstance(gpu_usage, str) else FunctionProfiler().format_bytes(gpu_usage))
-    table.add_row("GPU usages", str(gpu_usages) if isinstance(gpu_usages, list) else gpu_usages)
-    table.add_row("I/O usage", io_usage if isinstance(io_usage, str) else FunctionProfiler().format_bytes(io_usage))
-    table.add_row("Avg Duration", f"{avg_time:.6f} seconds" if isinstance(avg_time, (int, float)) else str(avg_time))
-    table.add_row("Avg CPU time", f"{avg_cpu:.6f} seconds" if isinstance(avg_cpu, (int, float)) else str(avg_cpu))
-    table.add_row("Avg Memory usage", avg_memory if isinstance(avg_memory, str) else FunctionProfiler().format_bytes(avg_memory))
-    table.add_row("Avg GPU usage", avg_gpu if isinstance(avg_gpu, str) else FunctionProfiler().format_bytes(avg_gpu))
-    table.add_row("Avg GPU usages", str(avg_gpus) if isinstance(avg_gpus, list) else avg_gpus)
-    table.add_row("Avg I/O usage", avg_io if isinstance(avg_io, str) else FunctionProfiler().format_bytes(avg_io))
-    table.add_row("[bold]Total calls[/bold]", f"[bold red]{calls}[/bold red]")
-    if notes:
-        table.add_row("Notes", f"[italic]{notes}[/italic]")
-
-    console.print(table)
-    console.print("")  # Add an empty line for better separation between profile outputs
-
-
-# # Example usage
-# display_profile_info(
-#     name="ExampleBlock",
-#     duration=0.123456,
-#     cpu_usage=0.654321,
-#     mem_usage=1024 * 1024,
-#     gpu_usage=2048 * 1024,
-#     io_usage=512 * 1024,
-#     avg_time=0.111111,
-#     avg_cpu=0.222222,
-#     avg_memory=1024 * 512,
-    #     avg_gpu=2048 * 512,
-#     avg_gpu=2048 * 512,
-#     avg_io=512 * 256,
-#     calls=42,
-# )
-
-
-class FunctionProfiler:
-    _instance = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -241,14 +138,7 @@ class FunctionProfiler:
         return cls._instance
 
     def initialize(self, csv_file=None, profiler_functions=None, target_module=None):
-        try:
-            pynvml.nvmlInit()
-            self.num_gpus = pynvml.nvmlDeviceGetCount()
-            self.gpu_handles = [pynvml.nvmlDeviceGetHandleByIndex(i) for i in range(self.num_gpus)]
-        except pynvml.NVMLError:
-            print("[yellow]Warning: Unable to initialize GPU monitoring.[/yellow]")
-            self.num_gpus = 0
-            self.gpu_handles = []
+  
         self.csv_file = csv_file or "mbench_profile.csv"
         self.profiles = defaultdict(lambda: {"calls": 0, "total_time": 0, "total_cpu": 0, "total_memory": 0, "total_gpu": 0, "total_io": 0, "notes": "", "total_gpus": [0] * self.num_gpus})
         self.profiles = self.load_data()
@@ -257,40 +147,30 @@ class FunctionProfiler:
         self.profiler_functions = profiler_functions or set(dir(self)) | {"profileme"}
         self.when = None
         self.gpu_infos = []
+        self.num_gpus, self.gpu_handles = _get_gpu_handles(self)
         atexit.register(self.save_and_print_data)
-        atexit.register(pynvml.nvmlShutdown)
+ 
 
 
     def _get_gpu_usage(self):
         """Retrieve GPU usage information."""
         total_gpu_usage = 0
         gpu_usages = []
-        
+        if not _has_gpu():
+            return 0, []
         for handle in self.gpu_handles:
             try:
                 info = pynvml.nvmlDeviceGetMemoryInfo(handle)
                 gpu_usages.append(info.used)
                 total_gpu_usage += info.used
-            except pynvml.NVMLError as e:
-                print(f"[yellow]Warning: Unable to get GPU usage for handle {handle}. Error: {e}[/yellow]")
+            except Exception as e:
+                print(f"[yellow]Warning: Error retrieving GPU usage: {e}[/yellow]")
+                gpu_usages.append(0)
         
         return total_gpu_usage, gpu_usages
 
-        # Initialize GPU monitoring
+
     
-
-
-    def format_bytes(self, bytes_value):
-        kb = bytes_value / 1024
-        if kb < 1:
-            return f"{bytes_value:.2f} B"
-        elif kb < 1024:
-            return f"{kb:.2f} KB"
-        mb = kb / 1024
-        if mb < 1024:
-            return f"{mb:.2f} MB"
-        gb = mb / 1024
-        return f"{gb:.2f} GB"
 
     def set_target_module(self, module_name, when):
         self.target_module = module_name
@@ -400,7 +280,13 @@ class FunctionProfiler:
         return self.profile
 
     def _get_qual_name(self, frame: FrameType):
-        return frame.f_globals.get("__name__") + "." + frame.f_code.co_name
+        if self.when == "called":
+          
+            qual_key = self.target_module
+        else:
+            qual_key = sys._getframe(2).f_globals.get("__module__")
+        
+        return f"{qual_key}.{frame.f_code.co_qualname}"
 
 
 
@@ -505,6 +391,56 @@ class FunctionProfiler:
         return self.profiles[qual_key]["calls"]
 
 
+
+
+def display_profile_info(
+    name,
+    duration,
+    cpu_usage,
+    mem_usage,
+    gpu_usage,
+    io_usage,
+    avg_time,
+    avg_cpu,
+    avg_memory,
+    avg_gpu,
+    avg_io,
+    calls,
+    notes=None,
+    avg_gpus = None,
+    gpu_usages = None,
+):
+    table = Table(title=f"[bold blue]Profile Information for [cyan]{name}[/cyan][/bold blue]", border_style="bold")
+
+    table.add_column("Metric", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Value", style="yellow")
+
+    table.add_row("[bold]Duration[/bold]", f"[bold green]{duration:.6f} seconds[/bold green]")
+    table.add_row("Avg Duration", f"{avg_time:.6f} seconds" if isinstance(avg_time, (int, float)) else str(avg_time))
+
+    table.add_row("CPU time", f"{cpu_usage:.6f} seconds")
+    table.add_row("[bold]Memory usage[/bold]", f"[bold magenta]{mem_usage if isinstance(mem_usage, str) else FunctionProfiler().format_bytes(mem_usage)}[/bold magenta]")
+     
+    table.add_row("Avg CPU time", f"{avg_cpu:.6f} seconds" if isinstance(avg_cpu, (int, float)) else str(avg_cpu))
+    table.add_row("Avg Memory usage", avg_memory if isinstance(avg_memory, str) else FunctionProfiler().format_bytes(avg_memory))
+
+    table.add_row("I/O usage", io_usage if isinstance(io_usage, str) else FunctionProfiler().format_bytes(io_usage))
+    if _has_gpu():
+        table.add_row("GPU usage", gpu_usage if isinstance(gpu_usage, str) else FunctionProfiler().format_bytes(gpu_usage))
+        table.add_row("GPU usages", str(gpu_usages) if isinstance(gpu_usages, list) else gpu_usages)
+        
+        table.add_row("Avg GPU usage", avg_gpu if isinstance(avg_gpu, str) else FunctionProfiler().format_bytes(avg_gpu))
+        table.add_row("Avg GPU usages", str(avg_gpus) if isinstance(avg_gpus, list) else avg_gpus)
+    table.add_row("Avg I/O usage", avg_io if isinstance(avg_io, str) else FunctionProfiler().format_bytes(avg_io))
+    table.add_row("[bold]Total calls[/bold]", f"[bold red]{calls}[/bold red]")
+    if notes:
+        table.add_row("Notes", f"[italic]{notes}[/italic]")
+
+    console.print(table)
+    console.print("")  # Add an empty line for better separation between profile outputs
+
+
+
 _profiler_instance = None
 printed_profile = False
 printed_profile = False
@@ -524,53 +460,94 @@ def profileme(when: Literal["called", "calling"] = "called"):
             _profiler_instance.set_target_module(called_module, when)
             sys.setprofile(_profiler_instance.profile)
             console.print(
-                f"[bold green] Profiling started for module: {called_module} in when: {when} [/bold green]"
+                f"[bold green] Module [bold blue]{called_module} [/bold blue] will be profiled when [bold pink] {when} [/bold pink] . [/bold green]"
             )
     elif not printed_profile:
         printed_profile = True
         console.print("Profiling is not active. Set [bold pink]MBENCH=1[/bold pink] to enable profiling.")
 
-
-def profile(func):
+when = "called"
+@overload
+def profile(when: Literal["called", "calling"] = "called") -> Callable[[Callable], Callable]:...
+@overload
+def profile(func: Callable) -> Callable:...
+def profile(*args, **kwargs):
     """Decorator to profile a specific function."""
+    kwargs = dict(zip(["when", "func"], args), **kwargs)
+    if "func" in kwargs or not kwargs:
+        func =kwargs.pop("func")
+        def wrapper(*args, **kwargs):
+            global _profiler_instance, printed_profile
+            print(f"MBENCH environment variable: {os.environ.get('MBENCH')}")  # Debug print
+            if os.environ.get("MBENCH", "1") == "1":  # Default to "1" if not set
+                print("Creating FunctionProfiler instance")  # Debug print
+                _profiler_instance = FunctionProfiler()  # Always create a new instance
+                called_module = func.__module__
+                global when
+                _profiler_instance.set_target_module(called_module, when)
+                sys.setprofile(_profiler_instance.profile)
+                console.print(
+                    f"[bold green] Profiling started for module: {called_module} [/bold green]"
+                )
+                try:
+                    print("Starting profile")  # Debug print
+                    _profiler_instance._start_profile(sys._getframe())
+                    result = func(*args, **kwargs)
+                    print("Ending profile")  # Debug print
+                    _profiler_instance._end_profile(sys._getframe())
+                    return result
+                finally:
+                    sys.setprofile(None)  # Disable profiling after function execution
+            elif not printed_profile:
+                printed_profile = True
+                console.print("Profiling is not active. Set [bold pink]MBENCH=1[/bold pink] to enable profiling.")
+            return func(*args, **kwargs)
 
-    def wrapper(*args, **kwargs):
-        global _profiler_instance, printed_profile
-        print(f"MBENCH environment variable: {os.environ.get('MBENCH')}")  # Debug print
-        if os.environ.get("MBENCH", "1") == "1":  # Default to "1" if not set
-            print("Creating FunctionProfiler instance")  # Debug print
-            _profiler_instance = FunctionProfiler()  # Always create a new instance
-            called_module = func.__module__
-            _profiler_instance.set_target_module(called_module, "called")
-            sys.setprofile(_profiler_instance.profile)
-            console.print(
-                f"[bold green] Profiling started for module: {called_module} [/bold green]"
-            )
-            try:
-                print("Starting profile")  # Debug print
-                _profiler_instance._start_profile(sys._getframe())
-                result = func(*args, **kwargs)
-                print("Ending profile")  # Debug print
-                _profiler_instance._end_profile(sys._getframe())
-                return result
-            finally:
-                sys.setprofile(None)  # Disable profiling after function execution
-        elif not printed_profile:
-            printed_profile = True
-            console.print("Profiling is not active. Set [bold pink]MBENCH=1[/bold pink] to enable profiling.")
-        return func(*args, **kwargs)
+        return wrapper
 
-    return wrapper
+    _when = kwargs.pop("when", "called")
+    global when
+    when = _when
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            global _profiler_instance, printed_profile
+            print(f"MBENCH environment variable: {os.environ.get('MBENCH')}")  # Debug print
+            if os.environ.get("MBENCH", "1") == "1":  # Default to "1" if not set
+                print("Creating FunctionProfiler instance")  # Debug print
+                _profiler_instance = FunctionProfiler()  # Always create a new instance
+                called_module = func.__module__
+                global when
+                _profiler_instance.set_target_module(called_module, when)
+                sys.setprofile(_profiler_instance.profile)
+                console.print(
+                    f"[bold green] Profiling started for module: {called_module} [/bold green]"
+                )
+                try:
+                    print("Starting profile")  # Debug print
+                    _profiler_instance._start_profile(sys._getframe())
+                    result = func(*args, **kwargs)
+                    print("Ending profile")  # Debug print
+                    _profiler_instance._end_profile(sys._getframe())
+                    return result
+                finally:
+                    sys.setprofile(None)  # Disable profiling after function execution
+            elif not printed_profile:
+                printed_profile = True
+                console.print("Profiling is not active. Set [bold pink]MBENCH=1[/bold pink] to enable profiling.")
+            return func(*args, **kwargs)
+
+        return wrapper
+    return decorator
 
 
 
 @contextmanager
-def profiling(name="block", quiet=False):
+def profiling(name="block", when: Literal["called", "calling"] = "called", quiet=False):
     global printed_profile, start_data, _profiler_instance
     if os.environ.get("MBENCH", "1") == "1":  # Default to "1" if not set
         if _profiler_instance is None:
             _profiler_instance = FunctionProfiler()
-            _profiler_instance.set_target_module("__main__", "called")
+            _profiler_instance.set_target_module("__main__", when)
             sys.setprofile(_profiler_instance.profile)
         gpu_usage, gpu_usages = _profiler_instance._get_gpu_usage()
         start_data = {
@@ -638,3 +615,77 @@ def profiling(name="block", quiet=False):
                     gpu_usages=gpu_usages,
                     avg_gpus=[gpu / calls for gpu in profile_data.get("total_gpus", [0])]
                 )
+
+
+import subprocess
+import rich_click as click
+
+@click.command()
+@click.argument("path", type=click.Path(exists=True))
+@click.argument("command", nargs=-1)
+def main(path, command):
+
+    console.print(f"[bold green]Profiling path: {path}[/bold green]")
+    console.print(f"[bold green]Command to profile: {command}[/bold green]")
+    command = " ".join(command)
+    # Set up profiling
+    profiler = FunctionProfiler()
+    profiler.set_target_module("__main__", "called")
+    
+    # Change to the specified directory
+    original_dir = os.getcwd()
+    os.chdir(path)
+    
+    try:
+        # Run the command with profiling
+        console.print("[bold yellow]Starting command execution...[/bold yellow]")
+        start_time = time.time()
+        env = os.environ.copy()
+        env['PYTHONPATH'] = f"{os.getcwd()}:{env.get('PYTHONPATH', '')}"
+        process = subprocess.Popen(f"python -m mbench.wrapper {command}", shell=True, env=env)
+        process.wait()
+        end_time = time.time()
+        console.print(f"[bold yellow]Command execution completed in {end_time - start_time:.2f} seconds[/bold yellow]")
+    finally:
+        # Change back to the original directory
+        os.chdir(original_dir)
+    
+    # Load and display results
+    results = profiler.load_data()
+    console.print("[bold green]Profiling completed. Results saved to mbench_profile.csv[/bold green]")
+    
+    # Display summary of profiling results
+    console.print("[bold blue]Profiling Summary:[/bold blue]")
+    for func, data in results.items():
+        calls = data['calls']
+        total_time = data['total_time']
+        total_cpu = data['total_cpu']
+        total_memory = data['total_memory']
+        total_gpu = data['total_gpu']
+        total_io = data['total_io']
+        
+        avg_time = total_time / calls if calls > 0 else 0
+        avg_cpu = total_cpu / calls if calls > 0 else 0
+        avg_memory = total_memory / calls if calls > 0 else 0
+        avg_gpu = total_gpu / calls if calls > 0 else 0
+        avg_io = total_io / calls if calls > 0 else 0
+        
+        display_profile_info(
+            name=func,
+            duration=total_time,
+            cpu_usage=total_cpu,
+            mem_usage=total_memory,
+            gpu_usage=total_gpu,
+            io_usage=total_io,
+            avg_time=avg_time,
+            avg_cpu=avg_cpu,
+            avg_memory=avg_memory,
+            avg_gpu=avg_gpu,
+            avg_io=avg_io,
+            calls=calls,
+            notes=data.get('notes', '')
+        )
+
+
+if __name__ == "__main__":
+    main()
